@@ -56,6 +56,8 @@ public class SalesReport extends FTUProcess {
 	private StringBuffer	m_info = new StringBuffer();
 	/** info string*/
 	private StringBuilder info = new StringBuilder();
+	/** Product */
+	private int p_M_Product_ID = 0;
 
 	/**
 	 * Prepare - e.g., get Parameters.
@@ -83,6 +85,8 @@ public class SalesReport extends FTUProcess {
 				p_IsGenerated = para[i].getParameterAsString();
 			else if (name.equals("Type"))
 				p_Type = para[i].getParameterAsString();
+			else if (name.equals("M_Product_ID"))
+				p_M_Product_ID = para[i].getParameterAsInt();
 			else
 				log.log(Level.SEVERE, "Unknown Parameter: " + name);
 		}
@@ -119,7 +123,7 @@ public class SalesReport extends FTUProcess {
 				+ "JOIN (SELECT C_BPartner_ID,AD_Org_ID,M_Product_ID,SUM(Qty) as MovementQty "
 				+ "FROM FTU_RV_ConsignmentMovement WHERE MovementDate <= ") 
 				.append(DB.TO_DATE(p_DateInvoiced2, true))
-				.append(" GROUP BY C_BPartner_ID,AD_Org_ID,M_Product_ID) m ON m.M_Product_ID = i.M_Product_ID AND m.AD_Org_ID = i.AD_Org_ID ");
+				.append(" GROUP BY C_BPartner_ID,AD_Org_ID,M_Product_ID) m ON m.M_Product_ID = i.M_Product_ID AND m.AD_Org_ID = i.AD_Org_ID AND m.MovementQty > 0 ");
 				
 		if(p_C_BPartner_ID >0)
 			sqlInvoice.append(" AND m.C_BPartner_ID = ").append(p_C_BPartner_ID);
@@ -129,6 +133,10 @@ public class SalesReport extends FTUProcess {
 				.append(DB.TO_DATE(p_DateInvoiced2, true));
 		if(p_AD_Org_ID > 0)
 			sqlInvoice.append(" AND i.AD_Org_ID = ").append(p_AD_Org_ID);
+		
+		if(p_M_Product_ID > 0)
+			sqlInvoice.append(" AND i.M_Product_ID = ").append(p_M_Product_ID);
+		
 		if(p_IsGenerated != null)
 			sqlInvoice.append(" AND i.IsGenerated = '").append(p_IsGenerated).append("' ");
 		sqlInvoice.append("  ORDER BY i.DateInvoiced ");
