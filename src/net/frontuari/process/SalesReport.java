@@ -348,8 +348,8 @@ public class SalesReport extends FTUProcess {
 				line += 10;
 				String orgclause ="";
 				if(p_AD_Org_ID>0)
-				orgclause = " <= ? AND AD_Org_ID ";
-				String sqlMPO = "SELECT * FROM FTU_RV_ConsignmentMovement WHERE M_Product_ID = ? AND MovementDate = ? "+orgclause+" AND Qty <> 0 ORDER BY Created ASC";
+					orgclause = " AND AD_Org_ID = ? ";
+				String sqlMPO = "SELECT * FROM FTU_RV_ConsignmentMovement WHERE M_Product_ID = ? AND MovementDate <= ? "+orgclause+" AND Qty <> 0 ORDER BY Created ASC";
 				PreparedStatement psMPO = null;
 				ResultSet rsMPO = null;
 				try{
