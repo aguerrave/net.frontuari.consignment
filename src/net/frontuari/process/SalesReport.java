@@ -346,8 +346,9 @@ public class SalesReport extends FTUProcess {
 								+ " SET C_OrderSourceValue =  '"+order.getDocumentNo()+"' WHERE "+columnName+" = "+recordId, get_TrxName());
 
 				line += 10;
+				String orgclause ="";
 				if(p_AD_Org_ID>0)
-				String orgclause = " <= ? AND AD_Org_ID ";
+				orgclause = " <= ? AND AD_Org_ID ";
 				String sqlMPO = "SELECT * FROM FTU_RV_ConsignmentMovement WHERE M_Product_ID = ? AND MovementDate = ? "+orgclause+" AND Qty <> 0 ORDER BY Created ASC";
 				PreparedStatement psMPO = null;
 				ResultSet rsMPO = null;
