@@ -20,7 +20,6 @@ import org.compiere.model.MMovementLine;
 import org.compiere.model.MOrder;
 import org.compiere.model.MOrderLine;
 import org.compiere.model.Query;
-import org.compiere.process.DocAction;
 import org.compiere.process.ProcessInfoParameter;
 import org.compiere.util.AdempiereUserError;
 import org.compiere.util.DB;
@@ -115,18 +114,17 @@ public class SalesReport extends FTUProcess {
 		
 		int no = 0;
 		// get invoiced by date range
-			StringBuilder sqlMovements = new StringBuilder(
-								",COALESCE((SELECT SUM(Qty) FROM adempiere.FTU_RV_ConsignmentMovement cm"
-										+ " WHERE cm.M_Product_ID = i.M_Product_ID "
-										+ "AND cm.AD_Org_ID = i.AD_Org_ID ")
-								.append(" AND cm.MovementDate <= ")
-								.append(DB.TO_DATE(p_DateInvoiced2, true));
-						if(p_C_BPartner_ID > 0)
-							sqlMovements.append(" AND C_BPartner_ID = "+p_C_BPartner_ID);
-						sqlMovements.append("),0) AS MovementQty ");
-
-		StringBuilder sqlInvoice = new StringBuilder("SELECT * "+sqlMovements.toString()
-				+ "FROM adempiere.FTU_RV_Invoices i WHERE i.DateInvoiced BETWEEN  ")
+		StringBuilder sqlInvoice = new StringBuilder("SELECT i.*,m.MovementQty "
+				+ "FROM FTU_RV_Invoices i "
+				+ "JOIN (SELECT C_BPartner_ID,AD_Org_ID,M_Product_ID,SUM(Qty) as MovementQty "
+				+ "FROM FTU_RV_ConsignmentMovement WHERE MovementDate <= ") 
+				.append(DB.TO_DATE(p_DateInvoiced2, true))
+				.append(" GROUP BY C_BPartner_ID,AD_Org_ID,M_Product_ID) m ON m.M_Product_ID = i.M_Product_ID AND m.AD_Org_ID = i.AD_Org_ID ");
+				
+		if(p_C_BPartner_ID >0)
+			sqlInvoice.append(" AND m.C_BPartner_ID = ").append(p_C_BPartner_ID);
+				
+		sqlInvoice.append(" WHERE i.DateInvoiced BETWEEN  ")
 				.append(DB.TO_DATE(p_DateInvoiced1, true)).append(" AND ")
 				.append(DB.TO_DATE(p_DateInvoiced2, true));
 		if(p_AD_Org_ID > 0)
@@ -149,18 +147,6 @@ public class SalesReport extends FTUProcess {
 					SOQty = BigDecimal.ZERO;
 					// get movements by product and date range
 					if (rs1.getInt("M_Product_ID") != M_Product_ID) {
-					/*	StringBuilder sqlMovements = new StringBuilder(
-								"SELECT SUM(Qty) AS MovementQty FROM adempiere.FTU_RV_ConsignmentMovement"
-										+ " WHERE M_Product_ID = ")
-								.append(rs1.getInt("M_Product_ID"))
-								.append(" AND AD_Org_ID = ")
-								.append(rs1.getInt("AD_Org_ID"))
-								.append(" AND MovementDate <= ")
-								.append(DB.TO_DATE(p_DateInvoiced2, true));
-						if(p_C_BPartner_ID > 0)
-							sqlMovements.append(" AND C_BPartner_ID = "+p_C_BPartner_ID);
-						movementQty = DB.getSQLValueBD(get_TrxName(),
-								sqlMovements.toString());*/
 						movementQty = rs1.getBigDecimal("MovementQty");
 						M_Product_ID = rs1.getInt("M_Product_ID");
 						if(movementQty == null)
@@ -178,11 +164,10 @@ public class SalesReport extends FTUProcess {
 							SOQty = movementQty;
 							movementQty = BigDecimal.ZERO;
 						}
-					
 						
 						// insert records with SOQty
 						StringBuilder insert = new StringBuilder(
-								"INSERT INTO adempiere.T_Sales ");
+								"INSERT INTO T_Sales ");
 						insert.append(
 								" ( AD_Client_ID, AD_PInstance_ID, SOQty, AD_Org_ID, C_Invoice_ID, IsPaid, DateAcct,DocStatus, GrandTotal, C_DocTypeTarget_ID, ")
 								.append("C_Order_ID, Description, DateInvoiced, DocumentNo ,M_PriceList_ID, C_BPartner_Location_ID, C_BPartner_ID, C_ConversionType_ID,C_Currency_ID, ")
@@ -264,7 +249,7 @@ public class SalesReport extends FTUProcess {
 	 */
 	private String createO() throws Exception {
 		int noOrders = 0;
-		StringBuilder sql = new StringBuilder( "SELECT * FROM adempiere.T_Sales "
+		StringBuilder sql = new StringBuilder( "SELECT * FROM T_Sales "
 				+ " WHERE IsGenerated = 'N' "
 					+ " AND DateInvoiced BETWEEN ?  AND ? "
 					+ " AND AD_PInstance_ID = ? ");
