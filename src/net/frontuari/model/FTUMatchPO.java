@@ -120,6 +120,44 @@ public class FTUMatchPO extends MMatchPO {
 	}	//	get
 	
 	/**
+	 * 	Get PO Matches for OrderLine
+	 *	@param ctx context
+	 *	@param C_OrderLine_ID order
+	 *	@param trxName transaction
+	 *	@return array of matches
+	 */
+	public static FTUMatchPO[] getOrderLine (Properties ctx, int C_OrderLine_ID, String trxName)
+	{
+		if (C_OrderLine_ID == 0)
+			return new FTUMatchPO[]{};
+		//
+		String sql = "SELECT * FROM M_MatchPO WHERE C_OrderLine_ID=?";
+		ArrayList<FTUMatchPO> list = new ArrayList<FTUMatchPO>();
+		PreparedStatement pstmt = null;
+		ResultSet rs = null;
+		try
+		{
+			pstmt = DB.prepareStatement (sql, trxName);
+			pstmt.setInt (1, C_OrderLine_ID);
+			rs = pstmt.executeQuery ();
+			while (rs.next ())
+				list.add (new FTUMatchPO (ctx, rs, trxName));
+		}
+		catch (Exception e)
+		{
+			s_log.log(Level.SEVERE, sql, e); 
+		}
+		finally
+		{
+			DB.close(rs, pstmt);
+			rs = null; pstmt = null;
+		}
+		FTUMatchPO[] retValue = new FTUMatchPO[list.size()];
+		list.toArray (retValue);
+		return retValue;
+	}	//	getOrderLine
+	
+	/**
 	 * Override beforeSave for prevent that set C_InvoiceLine_ID
 	 */
 	@Override
