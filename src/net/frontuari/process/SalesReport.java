@@ -341,8 +341,8 @@ public class SalesReport extends FTUProcess {
 				orderLine.set_ValueOfColumn(columnName, recordId);
 				orderLine.saveEx(get_TrxName());
 				// add reference to final order
-				DB.executeUpdate(" UPDATE T_Sales "
-								+ " SET C_OrderSourceValue =  '"+order.getDocumentNo()+"' WHERE "+columnName+" = "+recordId, get_TrxName());
+				//DB.executeUpdate(" UPDATE T_Sales "
+					//			+ " SET C_OrderSourceValue =  '"+order.getDocumentNo()+"' WHERE "+columnName+" = "+recordId, get_TrxName());
 
 				line += 10;
 				String orgclause ="";
@@ -419,7 +419,7 @@ public class SalesReport extends FTUProcess {
 
 			}
 			//	Check if have product when different prices
-			
+			MOrder norder = findProductsWithDifferentPrice(order);
 			if(order != null) {
 				/*order.setDocAction(DocAction.ACTION_Prepare);
 				if (!order.processIt(DocAction.ACTION_Prepare))
@@ -437,6 +437,10 @@ public class SalesReport extends FTUProcess {
 				addBufferLog(order.getC_Order_ID(), order.getDateOrdered(), null,
 						Msg.parseTranslation(getCtx(), "@OrderCreated@"+ order.getDocumentNo()),
 						MOrder.Table_ID, order.getC_Order_ID());
+				if(norder != null)
+					addBufferLog(norder.getC_Order_ID(), norder.getDateOrdered(), null,
+							Msg.parseTranslation(getCtx(), "@OrderCreated@"+ norder.getDocumentNo()),
+							MOrder.Table_ID, norder.getC_Order_ID());
 				
 				System.out.println("Orden "+order.getDocumentNo()+" Status "+order.getDocStatus());
 			}else{
@@ -447,7 +451,7 @@ public class SalesReport extends FTUProcess {
 				
 		} catch (Exception e) {
 			rollback();
-			throw new AdempiereException("SalesReport - Create OC" + e);
+			throw new AdempiereException("SalesReport - Create OC " + e);
 		} finally {
 			DB.close(rs, pstmt);
 			rs = null;
@@ -468,21 +472,21 @@ public class SalesReport extends FTUProcess {
 		return 0;
 	}
 	
-	private void findProductsWithDifferentPrice(MOrder o)
+	private MOrder findProductsWithDifferentPrice(MOrder o)
 	{
 		String sql = "SELECT m_product_id,priceactual FROM c_orderline WHERE c_order_id = ? "
 				+ "GROUP BY m_product_id,priceactual "
 				+ "ORDER BY m_product_id,priceactual";
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
-		
+
+		MOrder nord = null;
 		try {
 			pstmt = DB.prepareStatement(sql.toString(), get_TrxName());
 			pstmt.setInt(1, o.get_ID());
 			rs = pstmt.executeQuery();
 			int ProductID = 0;
 			BigDecimal Price = BigDecimal.ZERO;
-			MOrder nord = null;
 			while (rs.next()) {
 				//	First iterator
 				if(ProductID == 0)
@@ -500,6 +504,7 @@ public class SalesReport extends FTUProcess {
 						nord = new MOrder(getCtx(), 0, get_TrxName());
 						PO.copyValues(o, nord);
 						nord.setDocumentNo(null);
+						nord.setAD_Org_ID(o.getAD_Org_ID());
 						nord.saveEx(get_TrxName());
 					}
 					//	End Create New Order
@@ -515,13 +520,15 @@ public class SalesReport extends FTUProcess {
 			}
 		} catch (Exception e) {
 			rollback();
-			throw new AdempiereException("Create Other OC" + e);
+			throw new AdempiereException("Create Other OC " + e);
 		} finally {
 			DB.close(rs, pstmt);
 			rs = null;
 			pstmt = null;
 		}
-		
+		if(nord!=null)
+			m_info = m_info.append(nord.getDocumentNo());
+		return nord;
 	}
 	
 	private void createnewLine(MOrder o, int oID, int ProductID, BigDecimal Price)
@@ -530,9 +537,7 @@ public class SalesReport extends FTUProcess {
 		StringBuilder whereClauseFinal = new StringBuilder(" C_Order_ID=? AND M_Product_ID=? AND PriceActual=? ");
 		String orderClause = MOrderLine.COLUMNNAME_Line;
 		List<MOrderLine> list = new Query(getCtx(), I_C_OrderLine.Table_Name, whereClauseFinal.toString(), get_TrxName())
-			.setParameters(oID)
-			.setParameters(ProductID)
-			.setParameters(Price)
+			.setParameters(new Object[]{oID,ProductID,Price})
 			.setOrderBy(orderClause)
 			.list();
 		MOrderLine[] ol = list.toArray(new MOrderLine[list.size()]);
@@ -541,24 +546,21 @@ public class SalesReport extends FTUProcess {
 			//	Create new Line
 			MOrderLine nline = new MOrderLine(o);
 			PO.copyValues(line, nline);
+			nline.setAD_Org_ID(line.getAD_Org_ID());
+			nline.setQty(line.getQtyEntered());
+			nline.setPrice(line.getPriceActual());
 			nline.setC_Order_ID(o.get_ID());
+			
 			nline.saveEx(get_TrxName());
 			//	Transfer MatchPO
-			for(FTUMatchPO ompo : FTUMatchPO.getOrderLine(getCtx(), line.get_ID(), get_TrxName()))
-			{
-				FTUMatchPO mpo = new FTUMatchPO(getCtx(), 0, get_TrxName());
-				PO.copyValues(ompo, mpo);
-				//	Drop old Match PO
-				ompo.deleteEx(true, get_TrxName());
-				//	Create new MatchPO
-				mpo.setC_OrderLine_ID(nline.get_ID());
-				mpo.saveEx(get_TrxName());
-			}
+			DB.executeUpdate("UPDATE M_MatchPO SET C_OrderLine_ID ="+nline.get_ID()+" WHERE C_OrderLine_ID ="+line.get_ID(),get_TrxName());
 			//	Disable Old Line
 			line.addDescription("Transferido a nueva orden: "+o.getDocumentNo());
 			line.setQty(BigDecimal.ZERO);
 			line.setPrice(BigDecimal.ZERO);
 			line.setIsActive(false);
+			//line.set_ValueOfColumn("C_InvoiceLine_ID", 0);
+			//line.set_ValueOfColumn("M_InventoryLine_ID", 0);
 			line.saveEx(get_TrxName());
 		}		
 	}	//	createnewLine
