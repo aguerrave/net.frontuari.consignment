@@ -9,6 +9,8 @@ import java.util.logging.Level;
 
 import net.frontuari.base.FTUProcess;
 import net.frontuari.model.FTUMatchPO;
+import net.frontuari.model.MFTUMatchPOConsignment;
+import net.frontuari.model.X_FTU_MatchPOConsignment;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.compiere.model.I_C_BPartner_Location;
@@ -16,8 +18,6 @@ import org.compiere.model.I_C_OrderLine;
 import org.compiere.model.MBPartner;
 import org.compiere.model.MBPartnerLocation;
 import org.compiere.model.MDocType;
-import org.compiere.model.MInventoryLine;
-import org.compiere.model.MInvoiceLine;
 import org.compiere.model.MMovementLine;
 import org.compiere.model.MOrder;
 import org.compiere.model.MOrderLine;
@@ -118,8 +118,6 @@ public class SalesReport extends FTUProcess {
 	 * 	
 	 */
 	private void insertRecords() {
-		
-		int no = 0;
 		// get invoiced by date range
 		StringBuilder sqlInvoice = new StringBuilder("SELECT i.*,m.MovementQty "
 				+ "FROM FTU_RV_Invoices i "
@@ -142,7 +140,7 @@ public class SalesReport extends FTUProcess {
 		
 		if(p_IsGenerated != null)
 			sqlInvoice.append(" AND i.IsGenerated = '").append(p_IsGenerated).append("' ");
-		sqlInvoice.append("  ORDER BY i.m_product_id,i.DateInvoiced ");
+		sqlInvoice.append("  ORDER BY i.M_Product_ID,i.DateInvoiced ");
 		PreparedStatement pstmt1 = null;
 		ResultSet rs1 = null;
 		try {
@@ -176,6 +174,51 @@ public class SalesReport extends FTUProcess {
 							movementQty = BigDecimal.ZERO;
 						}
 						
+						MBPartner bp = new MBPartner(getCtx(), p_C_BPartner_ID, get_TrxName());
+						BigDecimal priceStd = DB.getSQLValueBD(get_TrxName(), 
+								"SELECT PriceStd FROM M_ProductPrice pp JOIN M_PriceList_Version plv ON pp.M_PriceList_Version_ID = plv.M_PriceList_Version_ID WHERE plv.M_PriceList_ID = ? AND pp.M_Product_ID = ? AND plv.ValidFrom <= ? ORDER BY plv.ValidFrom DESC", 
+								new Object[]{bp.getPO_PriceList_ID(),rs1.getInt("M_Product_ID"), rs1.getTimestamp("DateInvoiced")});
+						
+						String clauseWhere = " AD_Org_ID = ? AND C_BPartner_ID = ? AND M_Product_ID = ? AND PriceStd = ? ";
+						if(rs1.getInt("C_InvoiceLine_ID")>0)
+							clauseWhere += " AND C_InvoiceLine_ID = "+rs1.getInt("C_InvoiceLine_ID");
+						if(rs1.getInt("M_InventoryLine_ID")>0)
+							clauseWhere += " AND M_InventoryLine_ID = "+rs1.getInt("M_InventoryLine_ID");
+						
+						MFTUMatchPOConsignment mpoc = new Query(getCtx(), X_FTU_MatchPOConsignment.Table_Name, clauseWhere, get_TrxName())
+								.setParameters(new Object[]{(p_AD_Org_ID > 0 ? p_AD_Org_ID: rs1.getInt("AD_Org_ID")),
+										p_C_BPartner_ID,rs1.getInt("M_Product_ID"),priceStd})
+								.first();
+						
+						if(mpoc == null)
+							mpoc = new MFTUMatchPOConsignment(getCtx(), 0, get_TrxName());
+						
+						mpoc.setAD_Org_ID((p_AD_Org_ID > 0 ? p_AD_Org_ID: rs1.getInt("AD_Org_ID")));
+						mpoc.setSOQty(SOQty);
+						mpoc.setDateInvoiced(rs1.getTimestamp("DateInvoiced"));
+						mpoc.setType(rs1.getString("Type"));
+						mpoc.setPriceStd(priceStd);
+						if(p_C_BPartner_ID>0)
+							mpoc.setC_BPartner_ID(p_C_BPartner_ID);
+						
+						mpoc.setC_BPartner_BPartner_Parent_ID(rs1.getInt("C_BPartner_ID"));
+						mpoc.setPriceActual(rs1.getBigDecimal("PriceActual"));
+						mpoc.setQtyInvoiced(rs1.getBigDecimal("QtyInvoiced"));
+						mpoc.setM_Product_ID(rs1.getInt("M_Product_ID"));
+						if(rs1.getInt("C_InvoiceLine_ID")>0)
+						{
+							mpoc.setC_Invoice_ID(rs1.getInt("C_Invoice_ID"));
+							mpoc.setC_InvoiceLine_ID(rs1.getInt("C_InvoiceLine_ID"));
+						}
+						if(rs1.getInt("M_InventoryLine_ID")>0)
+						{
+							mpoc.setM_Inventory_ID(rs1.getInt("M_Inventory_ID"));
+							mpoc.setM_InventoryLine_ID(rs1.getInt("M_InventoryLine_ID"));
+						}
+						
+						mpoc.saveEx(get_TrxName());
+						
+						/*
 						// insert records with SOQty
 						StringBuilder insert = new StringBuilder(
 								"INSERT INTO T_Sales ");
@@ -242,6 +285,7 @@ public class SalesReport extends FTUProcess {
 						no = DB.executeUpdate(insert.toString(), params, false, get_TrxName());
 						if (log.isLoggable(Level.FINE))
 							log.fine("Insert (1) #" + no);
+						*/
 						
 				}	
 			}// end while
@@ -260,35 +304,43 @@ public class SalesReport extends FTUProcess {
 	 */
 	private String createO() throws Exception {
 		int noOrders = 0;
-		StringBuilder sql = new StringBuilder( "SELECT * FROM T_Sales "
-				+ " WHERE IsGenerated = 'N' "
-					+ " AND DateInvoiced BETWEEN ?  AND ? "
-					+ " AND AD_PInstance_ID = ? ");
+		StringBuilder sql = new StringBuilder( "SELECT AD_Org_ID,M_Product_ID,PriceStd,SUM(SOQty) AS SOQty "
+				+ " FROM FTU_MatchPOConsignment "
+				+ " WHERE C_BPartner_ID = ? "
+					+ " AND DateInvoiced BETWEEN ?  AND ? ");
 		if (p_Type != null)
 			sql.append(" AND Type = ? ");
+		
+		if(p_M_Product_ID > 0)
+			sql.append(" AND M_Product_ID = ").append(p_M_Product_ID);
+		
+		//	Group by Product
+		sql.append(" GROUP BY AD_Org_ID,M_Product_ID,PriceStd ");
 		//	Order by Product
-		sql.append(" ORDER BY AD_Org_ID,C_BPartner_ID,M_Product_ID ");
+		sql.append(" ORDER BY AD_Org_ID,M_Product_ID,PriceStd ");
 		
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		MOrder order = null;
 		MOrderLine orderLine = null;
-		MInvoiceLine il= null;
+		/*MInvoiceLine il= null;
 		MInventoryLine inl = null;
 		int recordId = 0;
 		String columnName = "";
+		*/
 		int line = 10;
 		try {
 			pstmt = DB.prepareStatement(sql.toString(), get_TrxName());			
-			pstmt.setTimestamp(1, p_DateInvoiced1);
-			pstmt.setTimestamp(2, p_DateInvoiced2);
-			pstmt.setInt(3, getAD_PInstance_ID());
+			pstmt.setInt(1, p_C_BPartner_ID);
+			pstmt.setTimestamp(2, p_DateInvoiced1);
+			pstmt.setTimestamp(3, p_DateInvoiced2);
 			if(p_Type != null)
 				pstmt.setString(4, p_Type);
 			rs = pstmt.executeQuery();
 			while (rs.next()) {
 				MBPartner bp = new MBPartner(getCtx(), p_C_BPartner_ID, get_TrxName());
 				if (order == null) {
+					System.out.println("Creando Orden ");
 					order = new MOrder(getCtx(), 0, get_TrxName());
 					order.setAD_Org_ID(p_AD_Org_ID > 0 ? p_AD_Org_ID : rs
 							.getInt("AD_Org_ID"));
@@ -302,20 +354,20 @@ public class SalesReport extends FTUProcess {
 					order.setBill_BPartner_ID(p_C_BPartner_ID);
 					order.setBill_Location_ID(getLocation(p_C_BPartner_ID,
 							"IsBillTo"));
-					order.setM_Warehouse_ID(p_M_Warehouse_ID > 0 ? p_M_Warehouse_ID
-							: rs.getInt("M_Warehouse_ID"));
-					order.setC_Currency_ID(rs.getInt("C_Currency_ID"));
-					order.setSalesRep_ID(rs.getInt("SalesRep_ID"));
-					order.setPaymentRule(rs.getString("PaymentRule"));
-					order.setM_PriceList_ID((bp.getPO_PriceList_ID()==0 ? rs.getInt("PO_PriceList_ID") : bp.getPO_PriceList_ID()));
+					order.setM_Warehouse_ID(p_M_Warehouse_ID);
+					order.setC_Currency_ID(bp.getPO_PriceList().getC_Currency_ID());
+					order.setSalesRep_ID(bp.getSalesRep_ID());
+					order.setPaymentRule((!bp.getPaymentRule().isEmpty() ? bp.getPaymentRule() : MOrder.PAYMENTRULE_OnCredit));
+					order.setM_PriceList_ID(bp.getPO_PriceList_ID());
 					order.setIsSOTrx(false);
 					order.setC_PaymentTerm_ID(1000016); // Buscar Terminos de Pago que no sean Manuales y que no tengan plan de amortizacion, personalizacion biomercados.
 					order.saveEx(get_TrxName());
+					System.out.println("Orden: "+order.getDocumentInfo());
 				}
 				
 				BigDecimal SOQty = rs.getBigDecimal("SOQty");
 				// validate type of record
-				String type = rs.getString("Type");
+				/*String type = rs.getString("Type");
 				
 				if(type.equals("INV")){
 					columnName = "C_InvoiceLine_ID";
@@ -325,24 +377,33 @@ public class SalesReport extends FTUProcess {
 					columnName = "M_InventoryLine_ID";
 					recordId = rs.getInt("M_InventoryLine_ID");
 					inl = new MInventoryLine(getCtx(), recordId, get_TrxName());
-				}
+				}*/
 				// create lines
+				System.out.println("Creando Linea de Orden ");
 				orderLine = new MOrderLine(order);
 				
-				BigDecimal priceStd = DB.getSQLValueBD(get_TrxName(), 
+				/*BigDecimal priceStd = DB.getSQLValueBD(get_TrxName(), 
 						"SELECT PriceStd FROM M_ProductPrice pp JOIN M_PriceList_Version plv ON pp.M_PriceList_Version_ID = plv.M_PriceList_Version_ID WHERE plv.M_PriceList_ID = ? AND pp.M_Product_ID = ? AND plv.ValidFrom <= ? ORDER BY plv.ValidFrom DESC", 
 						new Object[]{bp.getPO_PriceList_ID(),rs.getInt("M_Product_ID"), rs.getTimestamp("DateInvoiced")});
-				
+				*/
 				orderLine.setLine(line);
 				orderLine.setM_Product_ID(rs.getInt("M_Product_ID"), true);
 				orderLine.setQtyEntered(SOQty);
 				orderLine.setQtyOrdered(SOQty);
-				orderLine.setPrice(priceStd);
-				orderLine.set_ValueOfColumn(columnName, recordId);
+				orderLine.setPrice(rs.getBigDecimal("PriceStd"));
+				//orderLine.set_ValueOfColumn(columnName, recordId);
 				orderLine.saveEx(get_TrxName());
+				System.out.println("Linea de Orden: "+orderLine.get_ID());
 				// add reference to final order
-				//DB.executeUpdate(" UPDATE T_Sales "
-					//			+ " SET C_OrderSourceValue =  '"+order.getDocumentNo()+"' WHERE "+columnName+" = "+recordId, get_TrxName());
+				String sqlUp = " UPDATE FTU_MatchPOConsignment "
+						+ " SET C_OrderLine_ID = "+orderLine.get_ID()
+						+ " WHERE C_OrderLine_ID IS NULL "
+						+ " AND M_Product_ID = "+orderLine.getM_Product_ID()
+						+ " AND AD_Org_ID = "+orderLine.getAD_Org_ID()
+						+ " AND PriceStd = "+orderLine.getPriceActual();
+				
+				System.out.println("Actualizando MatchPOConsingment "+sqlUp);
+				DB.executeUpdate(sqlUp, get_TrxName());
 
 				line += 10;
 				String orgclause ="";
@@ -353,7 +414,9 @@ public class SalesReport extends FTUProcess {
 				ResultSet rsMPO = null;
 				try{
 					psMPO = DB.prepareStatement(sqlMPO, get_TrxName());
-					if(il != null){
+					psMPO.setInt(1, rs.getInt("M_Product_ID"));
+					psMPO.setTimestamp(2, p_DateInvoiced2);
+					/*if(il != null){
 						psMPO.setInt(1, il.getM_Product_ID());
 					}else{
 						psMPO.setInt(1, inl.getM_Product_ID());
@@ -362,7 +425,7 @@ public class SalesReport extends FTUProcess {
 						psMPO.setTimestamp(2, il.getC_Invoice().getDateInvoiced());
 					}else{
 						psMPO.setTimestamp(2, inl.getM_Inventory().getMovementDate());
-					}
+					}*/
 					//add ad_org_id to where clause
 					if(p_AD_Org_ID>0)
 						psMPO.setInt(3, p_AD_Org_ID);
@@ -371,8 +434,10 @@ public class SalesReport extends FTUProcess {
 					BigDecimal qtyinvoiced = SOQty;
 					while(rsMPO.next())
 					{
+						System.out.println("Consultando MatchPO");
 						if(qtyinvoiced.compareTo(BigDecimal.ZERO) > 0)
 						{
+							System.out.println("Actualizando MatchPO");
 							FTUMatchPO[] matchPO = FTUMatchPO.get(getCtx(),  rsMPO.getInt("M_InOutLine_ID"), get_TrxName());
 							for (FTUMatchPO mMatchPO : matchPO) {
 								MDocType doct = ((MDocType) mMatchPO.getC_OrderLine().getC_Order().getC_DocTypeTarget());
@@ -392,6 +457,8 @@ public class SalesReport extends FTUProcess {
 								qty = qtyinvoiced;
 								qtyinvoiced = BigDecimal.ZERO;
 							}
+							
+							System.out.println("Creando MatchPO");
 							
 							FTUMatchPO mpo = new FTUMatchPO(getCtx(), 0, get_TrxName());
 							mpo.setAD_Org_ID(p_AD_Org_ID);

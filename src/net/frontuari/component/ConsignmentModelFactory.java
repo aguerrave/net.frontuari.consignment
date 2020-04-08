@@ -26,7 +26,7 @@ import net.frontuari.model.FTUMatchPO;
 /**
  * Model Factory
  */
-public class ModelFactory extends FTUModelFactory {
+public class ConsignmentModelFactory extends FTUModelFactory {
 
 	/**
 	 * For initialize class. Register the models to build

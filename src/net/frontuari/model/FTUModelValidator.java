@@ -13,8 +13,6 @@ import org.compiere.model.MClient;
 import org.compiere.model.MDocType;
 import org.compiere.model.MInOut;
 import org.compiere.model.MInOutLine;
-import org.compiere.model.MInventoryLine;
-import org.compiere.model.MInvoiceLine;
 import org.compiere.model.MMatchInv;
 import org.compiere.model.MMatchPO;
 import org.compiere.model.MMovementLine;
@@ -99,7 +97,7 @@ public class FTUModelValidator implements ModelValidator, FactsValidator {
 					|| timing == ModelValidator.TIMING_BEFORE_VOID) {
 				MOrder order = (MOrder) po;
 				
-				for (MOrderLine line : order.getLines(" AND C_InvoiceLine_ID IS NOT NULL", "")) {
+				for (MOrderLine line : order.getLines(" AND EXISTS (SELECT 1 FROM FTU_MatchPOConsignment mpoc WHERE mpoc.C_OrderLine_ID = C_OrderLine.C_OrderLine_ID)", "")) {
 					MMatchPO[] mPo = MMatchPO.getOrderLine(po.getCtx(), line.getC_OrderLine_ID(), po.get_TrxName());
 					for (MMatchPO mMatchPO : mPo) {
 						int movementLineID = DB.getSQLValue(po.get_TrxName(), "SELECT M_MovementLine_ID FROM M_MovementLine WHERE M_InOutLine_ID = ? ", mMatchPO.getM_InOutLine_ID());
@@ -115,7 +113,8 @@ public class FTUModelValidator implements ModelValidator, FactsValidator {
 						mMatchPO.saveEx(po.get_TrxName());
 					}
 				}
-			}else if(timing == ModelValidator.TIMING_AFTER_COMPLETE){
+			}
+			/*else if(timing == ModelValidator.TIMING_AFTER_COMPLETE){
 				MOrder order = (MOrder) po;
 				
 				for (MOrderLine line : order.getLines(" AND (C_InvoiceLine_ID IS NOT NULL OR M_InventoryLine_ID IS NOT NULL)", "")) {
@@ -158,7 +157,7 @@ public class FTUModelValidator implements ModelValidator, FactsValidator {
 					}
 					
 				}
-			}
+			}*/
 		}
 		
 		
