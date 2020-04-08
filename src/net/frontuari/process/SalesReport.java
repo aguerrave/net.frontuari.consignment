@@ -142,7 +142,7 @@ public class SalesReport extends FTUProcess {
 		
 		if(p_IsGenerated != null)
 			sqlInvoice.append(" AND i.IsGenerated = '").append(p_IsGenerated).append("' ");
-		sqlInvoice.append("  ORDER BY i.DateInvoiced ");
+		sqlInvoice.append("  ORDER BY i.m_product_id,i.DateInvoiced ");
 		PreparedStatement pstmt1 = null;
 		ResultSet rs1 = null;
 		try {
