@@ -128,6 +128,34 @@ public class X_FTU_MatchPOConsignment extends PO implements I_FTU_MatchPOConsign
 		return ii.intValue();
 	}
 
+	public org.compiere.model.I_C_DocType getC_DocType() throws RuntimeException
+    {
+		return (org.compiere.model.I_C_DocType)MTable.get(getCtx(), org.compiere.model.I_C_DocType.Table_Name)
+			.getPO(getC_DocType_ID(), get_TrxName());	}
+
+	/** Set Document Type.
+		@param C_DocType_ID 
+		Document type or rules
+	  */
+	public void setC_DocType_ID (int C_DocType_ID)
+	{
+		if (C_DocType_ID < 0) 
+			set_Value (COLUMNNAME_C_DocType_ID, null);
+		else 
+			set_Value (COLUMNNAME_C_DocType_ID, Integer.valueOf(C_DocType_ID));
+	}
+
+	/** Get Document Type.
+		@return Document type or rules
+	  */
+	public int getC_DocType_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_C_DocType_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
 	public org.compiere.model.I_C_Invoice getC_Invoice() throws RuntimeException
     {
 		return (org.compiere.model.I_C_Invoice)MTable.get(getCtx(), org.compiere.model.I_C_Invoice.Table_Name)
@@ -196,9 +224,9 @@ public class X_FTU_MatchPOConsignment extends PO implements I_FTU_MatchPOConsign
 	public void setC_OrderLine_ID (int C_OrderLine_ID)
 	{
 		if (C_OrderLine_ID < 1) 
-			set_ValueNoCheck (COLUMNNAME_C_OrderLine_ID, null);
+			set_Value (COLUMNNAME_C_OrderLine_ID, null);
 		else 
-			set_ValueNoCheck (COLUMNNAME_C_OrderLine_ID, Integer.valueOf(C_OrderLine_ID));
+			set_Value (COLUMNNAME_C_OrderLine_ID, Integer.valueOf(C_OrderLine_ID));
 	}
 
 	/** Get Sales Order Line.
@@ -210,6 +238,27 @@ public class X_FTU_MatchPOConsignment extends PO implements I_FTU_MatchPOConsign
 		if (ii == null)
 			 return 0;
 		return ii.intValue();
+	}
+
+	/** Set Create Confirm.
+		@param CreateConfirm Create Confirm	  */
+	public void setCreateConfirm (boolean CreateConfirm)
+	{
+		set_Value (COLUMNNAME_CreateConfirm, Boolean.valueOf(CreateConfirm));
+	}
+
+	/** Get Create Confirm.
+		@return Create Confirm	  */
+	public boolean isCreateConfirm () 
+	{
+		Object oo = get_Value(COLUMNNAME_CreateConfirm);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
 	}
 
 	/** Set Date Invoiced.
@@ -383,6 +432,34 @@ public class X_FTU_MatchPOConsignment extends PO implements I_FTU_MatchPOConsign
 	public int getM_Product_ID () 
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_M_Product_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	public org.compiere.model.I_M_Warehouse getM_Warehouse() throws RuntimeException
+    {
+		return (org.compiere.model.I_M_Warehouse)MTable.get(getCtx(), org.compiere.model.I_M_Warehouse.Table_Name)
+			.getPO(getM_Warehouse_ID(), get_TrxName());	}
+
+	/** Set Warehouse.
+		@param M_Warehouse_ID 
+		Storage Warehouse and Service Point
+	  */
+	public void setM_Warehouse_ID (int M_Warehouse_ID)
+	{
+		if (M_Warehouse_ID < 1) 
+			set_Value (COLUMNNAME_M_Warehouse_ID, null);
+		else 
+			set_Value (COLUMNNAME_M_Warehouse_ID, Integer.valueOf(M_Warehouse_ID));
+	}
+
+	/** Get Warehouse.
+		@return Storage Warehouse and Service Point
+	  */
+	public int getM_Warehouse_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_M_Warehouse_ID);
 		if (ii == null)
 			 return 0;
 		return ii.intValue();

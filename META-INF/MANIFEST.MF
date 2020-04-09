@@ -2,11 +2,11 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Consignment
 Bundle-SymbolicName: net.frontuari.consignment;singleton:=true
-Bundle-Version: 1.0.0.qualifier
-Bundle-Vendor: net.frontuari
+Bundle-Version: 1.1.0.qualifier
+Bundle-Vendor: Frontuari, C.A.
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Bundle-ActivationPolicy: lazy
-Bundle-Activator: org.adempiere.plugin.utils.AdempiereActivator
+Bundle-Activator: org.adempiere.plugin.utils.Incremental2PackActivator
 Require-Bundle: org.adempiere.base;bundle-version="3.1.0",
  org.adempiere.plugin.utils;bundle-version="3.1.0",
  org.zkoss.zk.library;bundle-version="7.0.7",

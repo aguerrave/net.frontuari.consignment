@@ -90,6 +90,21 @@ public interface I_FTU_MatchPOConsignment
 
 	public org.compiere.model.I_C_BPartner getC_BPartner() throws RuntimeException;
 
+    /** Column name C_DocType_ID */
+    public static final String COLUMNNAME_C_DocType_ID = "C_DocType_ID";
+
+	/** Set Document Type.
+	  * Document type or rules
+	  */
+	public void setC_DocType_ID (int C_DocType_ID);
+
+	/** Get Document Type.
+	  * Document type or rules
+	  */
+	public int getC_DocType_ID();
+
+	public org.compiere.model.I_C_DocType getC_DocType() throws RuntimeException;
+
     /** Column name C_Invoice_ID */
     public static final String COLUMNNAME_C_Invoice_ID = "C_Invoice_ID";
 
@@ -134,6 +149,15 @@ public interface I_FTU_MatchPOConsignment
 	public int getC_OrderLine_ID();
 
 	public org.compiere.model.I_C_OrderLine getC_OrderLine() throws RuntimeException;
+
+    /** Column name CreateConfirm */
+    public static final String COLUMNNAME_CreateConfirm = "CreateConfirm";
+
+	/** Set Create Confirm	  */
+	public void setCreateConfirm (boolean CreateConfirm);
+
+	/** Get Create Confirm	  */
+	public boolean isCreateConfirm();
 
     /** Column name Created */
     public static final String COLUMNNAME_Created = "Created";
@@ -265,6 +289,21 @@ public interface I_FTU_MatchPOConsignment
 	public int getM_Product_ID();
 
 	public org.compiere.model.I_M_Product getM_Product() throws RuntimeException;
+
+    /** Column name M_Warehouse_ID */
+    public static final String COLUMNNAME_M_Warehouse_ID = "M_Warehouse_ID";
+
+	/** Set Warehouse.
+	  * Storage Warehouse and Service Point
+	  */
+	public void setM_Warehouse_ID (int M_Warehouse_ID);
+
+	/** Get Warehouse.
+	  * Storage Warehouse and Service Point
+	  */
+	public int getM_Warehouse_ID();
+
+	public org.compiere.model.I_M_Warehouse getM_Warehouse() throws RuntimeException;
 
     /** Column name PriceActual */
     public static final String COLUMNNAME_PriceActual = "PriceActual";

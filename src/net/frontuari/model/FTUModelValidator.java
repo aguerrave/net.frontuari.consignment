@@ -112,52 +112,20 @@ public class FTUModelValidator implements ModelValidator, FactsValidator {
 						mMatchPO.setQty(BigDecimal.ZERO);
 						mMatchPO.saveEx(po.get_TrxName());
 					}
+					//	Unconfirm C_InvoiceLine
+					DB.executeUpdate("UPDATE C_InvoiceLine il set IsGenerated ='N' "
+							+ " FROM (SELECT C_InvoiceLine_ID FROM FTU_MatchPOConsignment fm "
+							+ " WHERE fm.C_OrderLine_ID = "+line.get_ID()+") mpoc "
+									+ "WHERE il.C_InvoiceLine_ID = mpoc.C_InvoiceLine_ID",po.get_TrxName());
+					//	Unconfirm M_InventoryLine
+					DB.executeUpdate("UPDATE M_InventoryLine il set IsGenerated ='N' "
+							+ " FROM (SELECT M_InventoryLine_ID FROM FTU_MatchPOConsignment fm "
+							+ " WHERE fm.C_OrderLine_ID = "+line.get_ID()+") mpoc "
+									+ "WHERE il.M_InventoryLine_ID = mpoc.M_InventoryLine_ID",po.get_TrxName());
+					//	Delete MatchPOConsignment
+					DB.executeUpdate("DELETE FROM FTU_MatchPOConsignment WHERE C_OrderLine_ID = "+line.get_ID(),po.get_TrxName());
 				}
 			}
-			/*else if(timing == ModelValidator.TIMING_AFTER_COMPLETE){
-				MOrder order = (MOrder) po;
-				
-				for (MOrderLine line : order.getLines(" AND (C_InvoiceLine_ID IS NOT NULL OR M_InventoryLine_ID IS NOT NULL)", "")) {
-					
-					int iLineId = line.get_ValueAsInt("C_InvoiceLine_ID");
-					int invLineId = line.get_ValueAsInt("M_InventoryLine_ID");
-					if(iLineId>0){
-						MInvoiceLine iLine = new MInvoiceLine(po.getCtx(),iLineId,po.get_TrxName());
-						iLine.set_ValueOfColumn("IsGenerated", "Y");
-						iLine.saveEx();
-					}
-					if(invLineId>0){
-						MInventoryLine invLine = new MInventoryLine(po.getCtx(),invLineId,po.get_TrxName());
-						invLine.set_ValueOfColumn("IsGenerated", "Y");
-						invLine.saveEx();
-						
-					}
-					
-				}
-				
-				
-			}else if(timing == ModelValidator.TIMING_AFTER_REVERSECORRECT
-					|| timing == ModelValidator.TIMING_AFTER_VOID){
-				MOrder order = (MOrder) po;
-				
-				for (MOrderLine line : order.getLines(" AND (C_InvoiceLine_ID IS NOT NULL OR M_InventoryLine_ID IS NOT NULL)", "")) {
-					
-					int iLineId = line.get_ValueAsInt("C_InvoiceLine_ID");
-					int invLineId = line.get_ValueAsInt("M_InventoryLine_ID");
-					if(iLineId>0){
-						MInvoiceLine iLine = new MInvoiceLine(po.getCtx(),iLineId,po.get_TrxName());
-						iLine.set_ValueOfColumn("IsGenerated", "N");
-						iLine.saveEx();
-					}
-					if(invLineId>0){
-						MInventoryLine invLine = new MInventoryLine(po.getCtx(),invLineId,po.get_TrxName());
-						invLine.set_ValueOfColumn("IsGenerated", "N");
-						invLine.saveEx();
-						
-					}
-					
-				}
-			}*/
 		}
 		
 		
