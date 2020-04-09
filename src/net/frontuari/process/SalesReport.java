@@ -32,6 +32,7 @@ import org.compiere.util.Msg;
  * Sales Report
  *
  * @author Fernanda Carrillo
+ * @author Jorge Colmenarez, Frontuari, C.A., <jlct.master@gmail.com>
  * 
  */
 public class SalesReport extends FTUProcess {
@@ -368,6 +369,12 @@ public class SalesReport extends FTUProcess {
 			}
 			//	Check if have product when different prices
 			MOrder norder = findProductsWithDifferentPrice(order);
+			MOrder norder1 = null;
+			//	Search if have other duplicate product
+			if(norder != null)
+			{
+				norder1 = findProductsWithDifferentPrice(norder);
+			}
 			if(order != null) {
 				/*order.setDocAction(DocAction.ACTION_Prepare);
 				if (!order.processIt(DocAction.ACTION_Prepare))
@@ -389,6 +396,10 @@ public class SalesReport extends FTUProcess {
 					addBufferLog(norder.getC_Order_ID(), norder.getDateOrdered(), null,
 							Msg.parseTranslation(getCtx(), "@OrderCreated@"+ norder.getDocumentNo()),
 							MOrder.Table_ID, norder.getC_Order_ID());
+				if(norder1 != null)
+					addBufferLog(norder1.getC_Order_ID(), norder1.getDateOrdered(), null,
+							Msg.parseTranslation(getCtx(), "@OrderCreated@"+ norder1.getDocumentNo()),
+							MOrder.Table_ID, norder1.getC_Order_ID());
 				
 				log.log(Level.WARNING, "", "Orden "+order.getDocumentNo()+" Status "+order.getDocStatus());
 			}else{
@@ -449,6 +460,7 @@ public class SalesReport extends FTUProcess {
 					//	Create new Order 
 					if(nord==null)
 					{
+						log.log(Level.WARNING, "", "Creando Orden");
 						nord = new MOrder(getCtx(), 0, get_TrxName());
 						PO.copyValues(o, nord);
 						nord.setDocumentNo(null);
@@ -492,6 +504,7 @@ public class SalesReport extends FTUProcess {
 		for(MOrderLine line : ol)
 		{
 			//	Create new Line
+			log.log(Level.WARNING, "", "Creando Linea Orden");
 			MOrderLine nline = new MOrderLine(o);
 			PO.copyValues(line, nline);
 			nline.setAD_Org_ID(line.getAD_Org_ID());
@@ -500,11 +513,15 @@ public class SalesReport extends FTUProcess {
 			nline.setC_Order_ID(o.get_ID());
 			
 			nline.saveEx(get_TrxName());
+			log.log(Level.WARNING, "", "Linea Orden: "+nline.get_ID());
 			//	Transfer MatchPO
+			log.log(Level.WARNING, "", "Actualizando MatchPO: "+"UPDATE M_MatchPO SET C_OrderLine_ID ="+nline.get_ID()+" WHERE C_OrderLine_ID ="+line.get_ID());
 			DB.executeUpdate("UPDATE M_MatchPO SET C_OrderLine_ID ="+nline.get_ID()+" WHERE C_OrderLine_ID ="+line.get_ID(),get_TrxName());
 			//	Transfer MatchPOConsignment
+			log.log(Level.WARNING, "", "Actualizando FTU_MatchPOConsignment: "+"UPDATE FTU_MatchPOConsignment SET C_OrderLine_ID ="+nline.get_ID()+" WHERE C_OrderLine_ID ="+line.get_ID());
 			DB.executeUpdate("UPDATE FTU_MatchPOConsignment SET C_OrderLine_ID ="+nline.get_ID()+" WHERE C_OrderLine_ID ="+line.get_ID(),get_TrxName());
 			//	Disable Old Line
+			log.log(Level.WARNING, "", "Actualizando Linea Orden vieja: "+line.get_ID());
 			line.addDescription("Transferido a nueva orden: "+o.getDocumentNo());
 			line.setQty(BigDecimal.ZERO);
 			line.setPrice(BigDecimal.ZERO);
