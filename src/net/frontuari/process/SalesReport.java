@@ -226,6 +226,9 @@ public class SalesReport extends FTUProcess {
 		if (p_Type != null)
 			sql.append(" AND Type = ? ");
 		
+		if (p_AD_Org_ID > 0)
+			sql.append(" AND AD_Org_ID = ").append(p_AD_Org_ID);
+		
 		if(p_M_Product_ID > 0)
 			sql.append(" AND M_Product_ID = ").append(p_M_Product_ID);
 		
