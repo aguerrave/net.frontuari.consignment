@@ -12,7 +12,7 @@ Require-Bundle: org.adempiere.base;bundle-version="3.1.0",
  org.zkoss.zk.library;bundle-version="7.0.7",
  org.adempiere.ui.zk;bundle-version="3.1.0"
 Service-Component: META-INF/ProcessFactory.xml, META-INF/CreteFromFactory.xml, META-INF/FormFactory.xml, META-INF/ModelValidatorFactory.xml,
- META-INF/ModelFactory.xml, META-INF/CalloutFactory.xml
+ META-INF/ModelFactory.xml, META-INF/CalloutFactory.xml, META-INF/DocFactory.xml
 Import-Package: org.compiere.apps,
  org.compiere.grid,
  org.compiere.minigrid,

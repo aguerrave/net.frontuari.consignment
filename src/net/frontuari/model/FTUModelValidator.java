@@ -126,6 +126,15 @@ public class FTUModelValidator implements ModelValidator, FactsValidator {
 					DB.executeUpdate("DELETE FROM FTU_MatchPOConsignment WHERE C_OrderLine_ID = "+line.get_ID(),po.get_TrxName());
 				}
 			}
+			if (timing == ModelValidator.TIMING_AFTER_COMPLETE)
+			{
+				MOrder order = (MOrder) po;
+				
+				for (MOrderLine line : order.getLines(" AND EXISTS (SELECT 1 FROM FTU_MatchPOConsignment mpoc WHERE mpoc.C_OrderLine_ID = C_OrderLine.C_OrderLine_ID)", "")) {
+					//	Set Processed MatchPOConsignment
+					DB.executeUpdate("UPDATE FTU_MatchPOConsignment SET Processed = 'Y', IsGenerated = 'Y' WHERE C_OrderLine_ID = "+line.get_ID(),po.get_TrxName());
+				}
+			}
 		}
 		
 		
