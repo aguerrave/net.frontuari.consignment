@@ -368,8 +368,11 @@ public class SalesReport extends FTUProcess {
 
 			}
 			//	Check if have product when different prices
-			MOrder norder = findProductsWithDifferentPrice(order);
+			
+			MOrder norder = null;
 			MOrder norder1 = null;
+			if(order != null)
+				norder = findProductsWithDifferentPrice(order);
 			//	Search if have other duplicate product
 			if(norder != null)
 			{
